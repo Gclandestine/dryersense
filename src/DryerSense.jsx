@@ -340,6 +340,7 @@ export default function DryerSense() {
             ["hardware", "HARDWARE"],
             ["tolerances", "TOLERANCES"],
             ["alerts", `ALERTS${alerts.length ? ` (${alerts.length})` : ""}`],
+            ["summary", "SUMMARY"],
           ].map(([id, label]) => (
             <button key={id} className={`tab-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</button>
           ))}
@@ -506,6 +507,153 @@ export default function DryerSense() {
                 SELECT A MODEL TO VIEW TOLERANCES
               </div>
             )}
+          </div>
+        )}
+
+        {/* SUMMARY TAB */}
+        {tab === "summary" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
+
+            {/* Intro */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "20px 22px" }}>
+              <div style={{ fontSize: 9, color: "#4ade80", letterSpacing: "0.15em", marginBottom: 10 }}>WHAT IS DRYERSENSE</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.8 }}>
+                DryerSense is a <span style={{ color: "#e2e8f0" }}>$36 clip-on sensor puck</span> that attaches magnetically to any residential dryer and streams vibration + surface temperature data over WiFi to this dashboard. It uses per-model tolerance profiles to flag early signs of bearing wear, drum imbalance, clogged vents, and failing heating elements — before they become costly repairs.
+              </div>
+            </div>
+
+            {/* How it works */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "20px 22px" }}>
+              <div style={{ fontSize: 9, color: "#64748b", letterSpacing: "0.15em", marginBottom: 16 }}>HOW IT WORKS</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {[
+                  {
+                    step: "01",
+                    color: "#3b82f6",
+                    title: "Vibration sampling",
+                    body: "The ADXL345 accelerometer samples at up to 3200 Hz over I²C. The RPi reads the X/Y/Z axes and computes dominant frequency (via zero-crossing detection) and peak amplitude. Readings are taken every 500 ms and averaged over a 2-second window.",
+                  },
+                  {
+                    step: "02",
+                    color: "#ef4444",
+                    title: "Temperature sensing",
+                    body: "An NTC 10K thermistor bonded to the dryer casing feeds into an MCP3008 8-channel ADC over SPI. The Steinhart–Hart equation converts resistance to °F. Surface temp correlates with heater on/off cycles and is used to detect vent blockages (abnormally long heating cycles).",
+                  },
+                  {
+                    step: "03",
+                    color: "#a855f7",
+                    title: "On-device processing",
+                    body: "A lightweight Python daemon on the RPi Zero 2W classifies each reading against the loaded model tolerance profile. Anomalies are timestamped and queued. The daemon exposes a local WebSocket endpoint — this dashboard connects directly to it on the LAN.",
+                  },
+                  {
+                    step: "04",
+                    color: "#f97316",
+                    title: "Dashboard & alerts",
+                    body: "This React app connects to the WebSocket feed and renders gauges, sparklines, and heater cycle state in real time. Out-of-tolerance readings are surfaced in the Alerts tab. Future: push notifications via Pushover or ntfy.sh when a cycle anomaly is detected.",
+                  },
+                ].map(({ step, color, title, body }, i, arr) => (
+                  <div key={step} style={{ display: "flex", gap: 16, paddingBottom: i < arr.length - 1 ? 16 : 0 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: "50%",
+                        background: color + "22", border: `1px solid ${color}66`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 8, color, fontFamily: "'DM Mono', monospace", flexShrink: 0,
+                      }}>{step}</div>
+                      {i < arr.length - 1 && <div style={{ width: 1, flex: 1, background: "#1e293b", marginTop: 4 }} />}
+                    </div>
+                    <div style={{ paddingBottom: i < arr.length - 1 ? 4 : 0 }}>
+                      <div style={{ fontSize: 10, color: "#e2e8f0", letterSpacing: "0.05em", marginBottom: 6 }}>{title}</div>
+                      <div style={{ fontSize: 9, color: "#64748b", lineHeight: 1.7 }}>{body}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* BOM */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "20px 22px" }}>
+              <div style={{ fontSize: 9, color: "#64748b", letterSpacing: "0.15em", marginBottom: 16 }}>BILL OF MATERIALS</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {[
+                  { item: "Raspberry Pi Zero 2W",  qty: "×1", cost: "$15", color: "#4ade80",  note: "Main compute. WiFi built-in, runs Python 3 daemon." },
+                  { item: "ADXL345 breakout",       qty: "×1", cost: "$3",  color: "#3b82f6",  note: "±16g 3-axis accelerometer. I²C, 3.3V." },
+                  { item: "NTC 10K thermistor",     qty: "×1", cost: "$1",  color: "#ef4444",  note: "Surface temp probe. Bonded to dryer casing." },
+                  { item: "MCP3008 ADC",            qty: "×1", cost: "$3",  color: "#f97316",  note: "8-ch SPI ADC to digitize thermistor output." },
+                  { item: "Neodymium base plate",   qty: "×1", cost: "$6",  color: "#94a3b8",  note: "N52 magnet plate. Attaches to any steel dryer body." },
+                  { item: "Custom PCB + housing",   qty: "×1", cost: "$8",  color: "#a855f7",  note: "2-layer PCB + printed ABS enclosure, ~60×40×20 mm." },
+                  { item: "USB-C cable + charger",  qty: "×1", cost: "$0",  color: "#64748b",  note: "Standard 5V/2.5A. Uses any phone charger." },
+                ].map(({ item, qty, cost, color, note }, i, arr) => (
+                  <div key={item} style={{
+                    display: "flex", alignItems: "flex-start", gap: 12,
+                    padding: "12px 0",
+                    borderBottom: i < arr.length - 1 ? "1px solid #1e293b" : "none",
+                  }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 3 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ fontSize: 10, color: "#e2e8f0" }}>{item}</span>
+                        <span style={{ fontSize: 8, color: "#475569", flexShrink: 0 }}>{qty}</span>
+                      </div>
+                      <div style={{ fontSize: 8, color: "#64748b", marginTop: 3, lineHeight: 1.5 }}>{note}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: cost === "$0" ? "#475569" : "#4ade80", fontFamily: "'Syne', sans-serif", fontWeight: 700, flexShrink: 0, minWidth: 36, textAlign: "right" }}>
+                      {cost === "$0" ? "free" : cost}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 16, padding: "12px 16px", background: "#020617", borderRadius: 8, border: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 9, color: "#64748b", letterSpacing: "0.1em" }}>TOTAL HARDWARE BOM</div>
+                  <div style={{ fontSize: 8, color: "#475569", marginTop: 2 }}>per unit at low volume · excludes charger</div>
+                </div>
+                <div style={{ fontSize: 20, fontFamily: "'Syne', sans-serif", fontWeight: 800, color: "#4ade80" }}>~$36</div>
+              </div>
+            </div>
+
+            {/* What it detects */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "20px 22px" }}>
+              <div style={{ fontSize: 9, color: "#64748b", letterSpacing: "0.15em", marginBottom: 14 }}>WHAT IT CAN DETECT</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+                {[
+                  { label: "Worn drum bearings",       signal: "Hz drift low",        color: "#3b82f6" },
+                  { label: "Unbalanced load",           signal: "Amplitude spike",     color: "#a855f7" },
+                  { label: "Loose or broken belt",      signal: "Hz irregular burst",  color: "#3b82f6" },
+                  { label: "Clogged vent / lint trap",  signal: "Long heat cycles",    color: "#ef4444" },
+                  { label: "Failing heating element",   signal: "Low temp delta",      color: "#f97316" },
+                  { label: "Thermostat overshoot",      signal: "Temp > upper bound",  color: "#f97316" },
+                ].map(({ label, signal, color }) => (
+                  <div key={label} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9, color: "#e2e8f0", marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 8, color, fontFamily: "'DM Mono', monospace" }}>↳ {signal}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Next steps */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "20px 22px" }}>
+              <div style={{ fontSize: 9, color: "#64748b", letterSpacing: "0.15em", marginBottom: 14 }}>NEXT STEPS / ROADMAP</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  ["Push notifications", "ntfy.sh or Pushover integration when anomaly detected mid-cycle."],
+                  ["Cloud logging", "Optional POST to a simple backend (Supabase / PocketBase) for historical trend analysis."],
+                  ["Cycle counter", "Track total drum-hours per model for predictive maintenance scheduling."],
+                  ["More models", "Expand tolerance DB — data sourced from service manuals and teardown measurements."],
+                  ["OTA updates", "Daemon auto-update via GitHub Releases + systemd watchdog on the RPi."],
+                ].map(([title, desc]) => (
+                  <div key={title} style={{ display: "flex", gap: 10 }}>
+                    <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#334155", flexShrink: 0, marginTop: 5 }} />
+                    <div>
+                      <span style={{ fontSize: 9, color: "#e2e8f0" }}>{title}</span>
+                      <span style={{ fontSize: 9, color: "#475569" }}> — {desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         )}
 
